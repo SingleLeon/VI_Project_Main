@@ -23,7 +23,7 @@ from Time_to_UTC import *
 
 
 # ----------------------  DataProcessing functions  --------------------------
-
+Pass
 def find_3_level_times(series, base=0, a1=1, a2=2, a3=3, delta_t=20):  # Passed Test 20170526
     count_1 = count_2 = count_3 = 0
     up_1 = up_2 = up_3 = 0
