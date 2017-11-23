@@ -1,4 +1,3 @@
-import pandas as pd
 import requests
 from INTEST_GPS_trans_API import GPS_FIX_WGS84
 from Time_to_UTC import utc_mktime

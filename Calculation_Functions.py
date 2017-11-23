@@ -7,11 +7,6 @@ import pandas as pd
 import xlrd
 import scipy as sp
 import requests
-import seaborn as sns
-import matplotlib.pyplot as plt
-# import warningsimport
-from sklearn import preprocessing
-from mpl_toolkits.mplot3d import Axes3D
 from get_API_information import GPS_to_road_information
 from INTEST_GPS_trans_API import GPS_FIX_WGS84
 from Time_to_UTC import *
@@ -503,6 +498,77 @@ def over_speed_cal(df, vspd):
 
 
 # --------------------------- File IO -------------------------------------
+def readfile(path, type='excel'):
+    if type == 'excel':
+        filename = re.match(r'^([0-9a-zA-Z/:_.\u4e00-\u9fa5]+)\\'  # 父文件夹
+                                r'([0-9a-zA-Z]+)_([0-9a-zA-Z]+)_([a-z]+)_([0-9]?.xls|xlsx)$', path)  # 文件名
+        CarName = filename.group(2)
+        TestName = filename.group(3)
+        DriverName = filename.group(4)
+        print('Start Transform ' + DriverName + filename.group(5) + ' data.')
+        bk = xlrd.open_workbook(path)
+        shxrange = range(bk.nsheets)
+        try:
+            sh = bk.sheet_by_index(0)
+        except:
+            pass
+
+        nrows = sh.nrows  # 获取行数
+        ncols = sh.ncols  # 获取列数
+        # print("nrows %d, ncols %d" % (nrows, ncols))
+        initial_field = sh.row_values(14)  # 原始字段，供查找
+        row_list = []  # 获取各行数据
+        for j in range(17, nrows):  # 数据行的起点
+            row_data = sh.row_values(j)
+            row_list.append(row_data)
+        row_array = np.array(row_list)  # 转换为 ndarray 格式
+
+    elif type == 'csv':
+        filename = re.match(r'^([0-9a-zA-Z/:_.\u4e00-\u9fa5]+)\\'  # 父文件夹
+                                r'([0-9a-zA-Z]+)_([0-9a-zA-Z]+)_([0-9a-zA-Z]+)_([0-9]+)_([0-9]+).(csv)$', path)  # 文件名
+        CarName = filename.group(2)
+        TestName = filename.group(3)
+        DriverName = filename.group(4)
+        Testid_com = filename.group(6)
+        csvdata = pd.read_csv(path)
+        row_array = np.array(csvdata)
+        initial_field = csvdata.columns.tolist()
+
+    elif type == 'txt':
+        filename = re.match(r'^([0-9a-zA-Z/:_.\u4e00-\u9fa5]+)\\'  # 父文件夹
+                                r'([0-9a-zA-Z]+)_([0-9a-zA-Z]+)_([a-z]+)_([0-9]+)_([0-9]+).(txt)$', path)  # 文件名
+        CarName = filename.group(2)
+        TestName = filename.group(3)
+        DriverName = filename.group(4)
+        Testid_com = filename.group(6)
+        # print('Start Transform ' + DriverName + filename.group(5) + ' data.')
+
+        with open(path, 'r') as file_to_read:
+            table = pd.read_table(file_to_read, sep='\t', header=12, index_col=False)  # 12行为表头，自动删除空行
+            table.drop([0, 1], axis=0, inplace=True)
+            row_array = np.array(table.iloc[:, 0:-1])  # 最后一列去掉
+            initial_field = table.columns.tolist()[0:-1]
+    return row_array, CarName, TestName, DriverName, initial_field, Testid_com, \
+            [DriverName + filename.group(5) + ' data']
+
+
+def readfile_new(path, type='csv'):
+    if type == 'csv':
+        filename = re.match(r'^([0-9a-zA-Z/:_.\u4e00-\u9fa5]+)/'  # 父文件夹
+                                r'([0-9a-zA-Z]+)_([0-9a-zA-Z]+)_([a-zA-Z]+)_([a-zA-Z]+)_'
+                                r'([0-9]+)_([a-zA-Z]+).(csv)$', path)  # 文件名
+        CarName = filename.group(2)
+        VINCode = filename.group(3)
+        TestGroup = filename.group(4)
+        TestName = filename.group(5)
+        TestTime = filename.group(6)
+        Operator = filename.group(7)
+
+        csvdata = pd.read_csv(path)
+        row_array = np.array(csvdata)
+        initial_field = csvdata.columns.tolist()
+
+    return initial_field
 
 
 def id_to_name(data, path='Driver_index.csv', mode='r'):
@@ -565,58 +631,6 @@ def static_map_request_url(Gps, step=400, pic_size=[500, 500]):
 
 
 def read_file(file_path, DBC_index, Car_index, Driver_index, type='txt'):
-    def readfile(path, type='excel'):
-        if type == 'excel':
-            filename = re.match(r'^([0-9a-zA-Z/:_.\u4e00-\u9fa5]+)\\'  # 父文件夹
-                                r'([0-9a-zA-Z]+)_([0-9a-zA-Z]+)_([a-z]+)_([0-9]?.xls|xlsx)$', i)  # 文件名
-            CarName = filename.group(2)
-            TestName = filename.group(3)
-            DriverName = filename.group(4)
-            print('Start Transform ' + DriverName + filename.group(5) + ' data.')
-            bk = xlrd.open_workbook(path)
-            shxrange = range(bk.nsheets)
-            try:
-                sh = bk.sheet_by_index(0)
-            except:
-                pass
-
-            nrows = sh.nrows  # 获取行数
-            ncols = sh.ncols  # 获取列数
-            # print("nrows %d, ncols %d" % (nrows, ncols))
-            initial_field = sh.row_values(14)  # 原始字段，供查找
-            row_list = []  # 获取各行数据
-            for j in range(17, nrows):  # 数据行的起点
-                row_data = sh.row_values(j)
-                row_list.append(row_data)
-            row_array = np.array(row_list)  # 转换为 ndarray 格式
-
-        elif type == 'csv':
-            filename = re.match(r'^([0-9a-zA-Z/:_.\u4e00-\u9fa5]+)\\'  # 父文件夹
-                                r'([0-9a-zA-Z]+)_([0-9a-zA-Z]+)_([0-9a-zA-Z]+)_([0-9]+)_([0-9]+).(csv)$', i)  # 文件名
-            CarName = filename.group(2)
-            TestName = filename.group(3)
-            DriverName = filename.group(4)
-            Testid_com = filename.group(6)
-            csvdata = pd.read_csv(path)
-            row_array = np.array(csvdata)
-            initial_field = csvdata.columns.tolist()
-
-        elif type == 'txt':
-            filename = re.match(r'^([0-9a-zA-Z/:_.\u4e00-\u9fa5]+)\\'  # 父文件夹
-                                r'([0-9a-zA-Z]+)_([0-9a-zA-Z]+)_([a-z]+)_([0-9]+)_([0-9]+).(txt)$', i)  # 文件名
-            CarName = filename.group(2)
-            TestName = filename.group(3)
-            DriverName = filename.group(4)
-            Testid_com = filename.group(6)
-            # print('Start Transform ' + DriverName + filename.group(5) + ' data.')
-
-            with open(path, 'r') as file_to_read:
-                table = pd.read_table(file_to_read, sep='\t', header=12, index_col=False)  # 12行为表头，自动删除空行
-                table.drop([0, 1], axis=0, inplace=True)
-                row_array = np.array(table.iloc[:, 0:-1])  # 最后一列去掉
-                initial_field = table.columns.tolist()[0:-1]
-        return row_array, CarName, TestName, DriverName, initial_field, Testid_com, \
-               [DriverName + filename.group(5) + ' data']
 
     DBC_csv_Refer = open(DBC_index, 'r')
     csvreader = csv.reader(DBC_csv_Refer)

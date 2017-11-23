@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="Icon">
+    <file>RideIcon.png</file>
+    <file>EnergyIcon.png</file>
+  </qresource>
+</RCC>
